@@ -1,5 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+//require a custom module date.js
+const date = require(__dirname+"/date.js");
 
 const app = express();
 let items = [];
@@ -15,16 +17,8 @@ app.listen(3000,function(){
 });
 
 app.get("/",function(req,res){
-  let today = new Date();
-  // var currentDay = today.getDay();
-  // var day = "";
-  let options = {
-    weekday:"long",
-    day:"numeric",
-    month:"long"
-  };
-
-  let day = today.toLocaleDateString("en-US",options);
+  //calling function from date.js
+  let day = date.getDate();
   // if (currentDay=== 6 || 0){
   //   day = "weekend";
   //
