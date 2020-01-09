@@ -1,86 +1,133 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-//require a custom module date.js
-const date = require(__dirname+"/date.js");
-
+const mongoose = require('mongoose');
+const _ = require('lodash');
 const app = express();
-let items = [];
-let workItems = [];
+
 
 app.set('view engine','ejs');
 app.use(bodyParser.urlencoded({extended:true}));
+
 //use whatever css and images in public folder
 app.use(express.static("public"));
+
+mongoose.connect('mongodb://localhost:27017/todolistDB', {useNewUrlParser: true,useUnifiedTopology:true});
+
+var db = mongoose.connection;
+
+//create a schema in mongoose to specify types for data
+const itemsSchema = new mongoose.Schema({
+    name:String
+});
+
+const Item = mongoose.model("item",itemsSchema);
+
+const item1 = new Item({
+  name:"Welcome to your todolist!"
+});
+const item2 = new Item({
+  name:"Hit the + button to add a new item"
+});
+const item3 = new Item({
+  name:"<-- Hit this to delete an item"
+});
+const defaultItems = [item1, item2, item3];
+
+//create a new schema for custom homepage
+const listSchema = {
+  name:String,
+  items:[itemsSchema]
+}
+
+const List = mongoose.model("List",listSchema);
+
 // ------------------------------------------//
-app.listen(3000,function(){
-  console.log("Server started on port 3000!");
-});
-
 app.get("/",function(req,res){
-  //calling function from date.js
-  let day = date.getDate();
-  // if (currentDay=== 6 || 0){
-  //   day = "weekend";
-  //
-  // }else{
-  //   day = "weekday";
-  // }
-
-  // switch(currentDay){
-  //   case 0:
-  //     day="Sunday";
-  //     break;
-  //   case 1:
-  //     day="Monday";
-  //     break;
-  //   case 2:
-  //     day="Tuesday";
-  //     break;
-  //   case 3:
-  //     day="Wednesday";
-  //     break;
-  //   case 4:
-  //     day="Thursday";
-  //     break;
-  //   case 5:
-  //     day="Friday";
-  //     break;
-  //   case 6:
-  //     day="Saturday";
-  //     break;
-  //   default:
-  //     break;
-  // }
-
-  res.render('list',{listTitle:day,newListItems:items});
+  //check is default items are existed
+  Item.find({},function(err,foundItems){
+    //if database is empty, insert defaultItems
+    if (foundItems.length === 0){
+      Item.insertMany(defaultItems,function(err){
+        if(err){
+              console.log(err);
+        }else{
+              console.log('Successfully inserted data');
+        }
+      });
+      res.redirect("/");
+    }else{
+      res.render('list',{listTitle:"Today",newListItems:foundItems});
+    }
+  });
 });
+//ejs params
+app.get("/:customListName",function(req,res){
+  //use lodash to make capitalized custom list name
+  const customListName = _.capitalize(req.params.customListName);
 
+  List.findOne({name:customListName},function(err,foundList){
+    if(!err){
+      if(!foundList){
+        const list = new List({
+          name:customListName,
+          items:defaultItems
+        });
+        //save created new obect to list collection
+        list.save();
+        //redirect to the corresponding page so it shows immediately
+        res.redirect("/"+customListName)
+      }else{
+          //show an existing list
+          res.render("list",{listTitle:foundList.name,newListItems:foundList.items})
+
+        }
+      }
+  });
+});
 app.post("/",function(req,res){
-  let item = req.body.newItem;
-  //this loop prevent the main page being rendered by padding
-  //item to work page
-  console.log(req.body);
-  //this body.list property relate to the button
-  //name and value in ejs file
-  //use this to make a if else loop to make sure data
-  //goes into right page
-  if(req.body.list === "Work"){
-    workItems.push(item);
-    res.redirect("/work")
-  }else{
-    items.push(item);
+  //get itemName from list.ejs file
+  const itemName = req.body.newItem;
+  const listName = req.body.list;
+  const item = new Item({
+    name: itemName
+  });
+
+  if(listName === 'Today'){
+    item.save();
     res.redirect("/");
+  }else{
+      List.findOne({name:listName},function(err,foundList){
+      foundList.items.push(item);
+      foundList.save();
+      res.redirect('/'+listName);
+    });
+  }
+});
+app.post("/delete",function(req,res){
+  //get checkbox value
+  const checkItemId = req.body.checkbox
+  const listName = req.body.listName;
+  //use a if loop to check which list is being modified
+  if(listName === "Today"){
+    //if checkbox is clicked then check box Id is passed from list.ejs to app.js
+    Item.findByIdAndRemove(checkItemId,function(err){
+      if(!err){
+        console.log("succefully deleted checked item");
+        //redirect to homepage after delete so the deletion will be appeared
+        res.redirect("/")
+      }
+    });
+  }else{
+    //pull from items array which has a _id of checkedItemId and update it
+    //$pull from mongodb can remove a object
+    List.findOneAndUpdate({name:listName},{$pull:{items:{_id:checkItemId}}},function(err,foundList){
+      if(!err){
+        res.redirect("/"+listName)
+      }
+    });
   }
 });
 
-app.get("/work",function(req,res){
-  res.render("list",{listTitle:"Work List",newListItems:workItems});
-});
-app.post("/work",function(req,res){
-  let item = req.body.newItem;
-  workItems.push(item);
-  res.redirect("/work")
-});
-app.get("/about",function(req,res){
-  res.render("about");
+app.listen(3000,function(){
+  console.log("Server started on port 3000!");
 });

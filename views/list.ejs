@@ -1,16 +1,23 @@
-//create header and footer ejs files in views to simply add header and footer
-//for each page that created so that each page can have the same style
+<%# create header and footer ejs files in views to simply add header and footer
+for each page that created so that each page can have the same style %>
 <%- include("header") -%>
     <div class="box" id="heading">
       <h1><%= listTitle %></h1>
     </div>
     <div class="box">
-      <% for(i=0;i<newListItems.length;i++){ %>
-        <div class="item">
-          <input type="checkbox">
-          <p><%= newListItems[i] %></p>
-        </div>
-      <% } %>
+      <%# get newListItems from app.js file from database %>
+      <% newListItems.forEach(function(item){ %>
+        <form action="/delete" method="post">
+          <div class="item">
+            <!-- this onChange submit the change to app.js when checkbox is chekced -->
+            <input type="checkbox" name="checkbox" onChange = "this.form.submit()" value="<%=item._id %>">
+            <p><%= item.name %></p>
+          </div>
+          <input type="hidden" name="listName" value="<%=listTitle %>"></input>
+        </form>
+
+      <% }); %>
+
       <form class="item" action="/" method="post">
         <input type="text" name="newItem" placeholder="New Item" autocomplete = "off">
         <button type="submit" name="list" value=<%= listTitle %>>+</button>
