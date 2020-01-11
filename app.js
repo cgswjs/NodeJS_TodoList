@@ -2,8 +2,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require('mongoose');
 const _ = require('lodash');
-const app = express();
 
+const app = express();
 
 app.set('view engine','ejs');
 app.use(bodyParser.urlencoded({extended:true}));
@@ -11,7 +11,8 @@ app.use(bodyParser.urlencoded({extended:true}));
 //use whatever css and images in public folder
 app.use(express.static("public"));
 
-mongoose.connect('mongodb://localhost:27017/todolistDB', {useNewUrlParser: true,useUnifiedTopology:true});
+//this makes the app connect to Mongo atlas cloud server and store data there
+mongoose.connect('mongodb+srv://yihan-chen:cyh890321@ian-personal-go5zs.mongodb.net/userDB', {useNewUrlParser: true,useUnifiedTopology:true});
 
 var db = mongoose.connection;
 
@@ -25,13 +26,13 @@ const Item = mongoose.model("item",itemsSchema);
 const item1 = new Item({
   name:"Welcome to your todolist!"
 });
-const item2 = new Item({
-  name:"Hit the + button to add a new item"
-});
-const item3 = new Item({
-  name:"<-- Hit this to delete an item"
-});
-const defaultItems = [item1, item2, item3];
+// const item2 = new Item({
+//   name:"Hit the + button to add a new item"
+// });
+// const item3 = new Item({
+//   name:"<-- Hit this to delete an item"
+// });
+const defaultItems = [item1];
 
 //create a new schema for custom homepage
 const listSchema = {
